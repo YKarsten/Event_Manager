@@ -1,17 +1,26 @@
 require 'csv'
+require 'google/apis/civicinfo_v2'
 
 def clean_zipcode(zipcode)
-  # if zipcode.nil?
-  #   '00000'
-  # elsif zipcode.length < 5
-  #   zipcode.rjust(5, '0')
-  # elsif zipcode.length > 5
-  #   zipcode[0..4]
-  # else
-  #   zipcode
-  # end
 zipcode.to_s.rjust(5, '0')[0..4]
-# #.to_s converts nil to "", #.rjust only adds "0" if string if the length < 5, otherwise it does nothing. slice[0..4] doesnt do anything to numbers with exactly 5 digits in length. This way all the methods can be applied to the zipcode and simplyfiy the above if else structure.
+end
+
+def legislators_by_zipcode(zip)
+  civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new
+  civic_info.key = 'AIzaSyClRzDqDh5MsXwnCWi0kOiiBivP6JsSyBw'
+
+  begin
+    legislators = civic_info.representative_info_by_address(
+      address: zip,
+      levels: 'country',
+      roles: ['legislatorUpperBody', 'legislatorLowerBody']
+    )
+    legislators = legislators.officials
+    legislator_names = legislators.map(&:name)
+    legislator_names.join(", ")
+  rescue
+    'You can find your representatives by visiting www.commoncause.org/take-action/find-elected-officials'
+  end
 end
 
 puts 'Event Manager initialized!'
@@ -27,5 +36,7 @@ contents.each do |row|
   
   zipcode = clean_zipcode(row[:zipcode])
 
-  puts "#{name} at #{zipcode}"
+  legislators = legislators_by_zipcode(zipcode)
+
+  puts "#{name} #{zipcode} #{legislators}"
 end
