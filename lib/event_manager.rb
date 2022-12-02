@@ -1,6 +1,7 @@
 require 'csv'
 require 'google/apis/civicinfo_v2'
 require 'erb'
+require 'time'
 
 def clean_zipcode(zipcode)
   zipcode.to_s.rjust(5, '0')[0..4]
@@ -17,6 +18,12 @@ def clean_phone_number(phone_number)
   else
     phone_number
   end
+end
+
+def hours_freq(array)
+  result = Hash.new(0)
+  array.each { |key| result[key] += 1 }
+  result
 end
 
 def legislators_by_zipcode(zip)
@@ -48,23 +55,26 @@ puts 'Event Manager initialized!'
 
 contents = CSV.open(
   'event_attendees.csv',
-   headers: true,
-   header_converters: :symbol
+  headers: true,
+  header_converters: :symbol
 )
 
 template_letter = File.read('form_letter.erb')
 erb_template = ERB.new template_letter
+hours = Array.new(0)
 
-contents.each do |row|
+contents.each_with_index do |row, index|
   id = row[0]
   name = row[:first_name]
 
   zipcode = clean_zipcode(row[:zipcode])
 
   phone_number = clean_phone_number(row[:homephone])
-  # phone_number = row[:homephone]
+  # puts phone_number
 
-  puts phone_number
+  reg_date = row[:regdate]
+  hours[index] = Time.strptime(reg_date, '%m/%d/%Y %k:%M').hour
+  # puts hours
 
   legislators = legislators_by_zipcode(zipcode)
 
@@ -72,3 +82,5 @@ contents.each do |row|
 
   save_thank_you_letter(id, form_letter)
 end
+puts 'People registered at the following hours with the given frequency'
+puts hours_freq(hours)
